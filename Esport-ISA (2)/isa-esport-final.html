@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISA Esport Tournament Bracket</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --isa-green: oklch(68% 0.23 145);
+            --isa-dark: oklch(40% 0.2 145);
+            --bg: oklch(98% 0.01 145);
+            --border: oklch(90% 0.02 145);
+            
+            --match-width: 240px;
+            --match-gap: 60px;
+            --font-size: 16px;
+        }
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(var(--border) 1px, transparent 1px);
+            background-size: 30px 30px;
+            margin: 0;
+            color: #1e293b;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+        }
+
+        .match-card {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            width: var(--match-width);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            position: relative;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        .team-slot {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            transition: all 0.2s;
+            font-size: var(--font-size);
+        }
+
+        .team-slot:last-child { border-bottom: none; }
+
+        .team-slot.winner {
+            background-color: var(--isa-green);
+            color: white;
+            font-weight: 700;
+        }
+
+        .team-slot.loser {
+            opacity: 0.4;
+            filter: grayscale(0.5);
+        }
+
+        .team-logo {
+            width: calc(var(--font-size) * 1.8);
+            height: calc(var(--font-size) * 1.8);
+            border-radius: 50%;
+            background: #fff;
+            object-fit: cover;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .line-svg {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .path {
+            fill: none;
+            stroke: var(--border);
+            stroke-width: 3;
+            stroke-linecap: round;
+        }
+
+        .path.active {
+            stroke: var(--isa-green);
+            stroke-width: 5;
+            filter: drop-shadow(0 0 5px var(--isa-green));
+        }
+
+        .champ-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .champ-card {
+            background: white;
+            padding: 50px;
+            border-radius: 40px;
+            text-align: center;
+            color: #1e293b;
+            border: 8px solid var(--isa-green);
+            box-shadow: 0 0 80px var(--isa-green);
+            transform: scale(0.9);
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .champ-overlay.active { display: flex; }
+        .champ-overlay.active .champ-card { transform: scale(1); opacity: 1; }
+
+        .btn-isa {
+            background: var(--isa-green);
+            color: white;
+            font-weight: 900;
+            border-radius: 12px;
+            box-shadow: 0 4px 0 oklch(50% 0.15 145);
+            transition: all 0.1s;
+        }
+
+        .btn-isa:hover { transform: translateY(-1px); box-shadow: 0 5px 0 oklch(50% 0.15 145); }
+        .btn-isa:active { transform: translateY(3px); box-shadow: 0 1px 0 oklch(50% 0.15 145); }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- CHAMPION OVERLAY -->
+    <div id="champ-overlay" class="champ-overlay" onclick="closeChamp()">
+        <div class="champ-card" onclick="event.stopPropagation()">
+            <h4 class="text-green-500 font-black tracking-widest mb-4">ISA ESPORT CHAMPION</h4>
+            <img id="champ-img" src="" class="w-48 h-48 mx-auto rounded-full border-4 border-green-500 mb-6 bg-white shadow-xl object-cover" />
+            <h2 id="champ-name" class="text-6xl font-black mb-10">NAME</h2>
+            <button class="btn-isa px-12 py-3 text-lg" onclick="closeChamp()">ยอดเยี่ยม!</button>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div class="min-h-screen flex flex-col items-center pb-20">
+        
+        <header class="text-center py-12 flex flex-col items-center no-print">
+            <img src="mpfk3fj8-image.png" class="h-28 mb-4 drop-shadow-xl" />
+            <h1 class="text-6xl font-black uppercase tracking-tight">ISA <span class="text-green-500">ESPORT</span></h1>
+            <p class="text-slate-400 font-bold uppercase tracking-[0.4em] text-xs">Islamsriayuttha Foundation School</p>
+        </header>
+
+        <!-- INPUT SECTION -->
+        <div id="input-section" class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-10 px-6">
+            <div class="glass p-10 rounded-[2.5rem] shadow-2xl">
+                <h3 class="text-2xl font-black mb-8 flex items-center gap-3">
+                    <span class="w-2.5 h-8 bg-green-500 rounded-full"></span>
+                    จัดการรายชื่อทีม
+                </h3>
+                <div class="space-y-6">
+                    <div>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">ชื่อทีม</label>
+                        <input id="team-name" class="w-full p-4 border-2 rounded-2xl font-bold outline-none focus:border-green-500 transition-all text-lg" placeholder="พิมพ์ชื่อทีม..." onkeydown="if(event.key==='Enter') addTeam()" />
+                    </div>
+                    <div>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">โลโก้ทีม (ถ้ามี)</label>
+                        <div class="flex items-center gap-5 p-4 bg-slate-50 border-2 border-dashed rounded-2xl">
+                            <div class="w-20 h-20 bg-white rounded-xl overflow-hidden border-2 flex items-center justify-center">
+                                <img id="logo-preview" src="mpfk3fj8-image.png" class="w-full h-full object-cover opacity-20" />
+                            </div>
+                            <div class="flex-1">
+                                <input type="file" id="logo-upload" class="text-xs font-bold" accept="image/*" onchange="previewLogo(this)" />
+                            </div>
+                        </div>
+                    </div>
+                    <button class="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-lg hover:bg-black transition-all shadow-xl" onclick="addTeam()">เพิ่มทีมเข้าร่วม</button>
+                </div>
+            </div>
+
+            <div class="glass p-10 rounded-[2.5rem] shadow-2xl flex flex-col">
+                <h3 class="text-2xl font-black mb-6 flex justify-between">
+                    <span>รายชื่อทีม</span>
+                    <span id="team-count" class="text-green-500">0</span>
+                </h3>
+                <div id="teams-list" class="flex-1 space-y-3 overflow-y-auto max-h-[350px] pr-2 custom-scrollbar">
+                    <!-- Teams will appear here -->
+                </div>
+                <button id="start-btn" class="w-full py-6 bg-green-500 text-white rounded-[2rem] font-black text-2xl mt-8 shadow-xl shadow-green-100 hover:scale-[1.02] transition-transform disabled:opacity-30" onclick="startBracket()">เริ่มสุ่มสายการแข่งขัน</button>
+            </div>
+        </div>
+
+        <!-- BRACKET SECTION -->
+        <div id="bracket-section" class="w-full hidden flex-col items-center">
+            <div class="w-full max-w-6xl glass p-6 rounded-3xl mb-12 flex flex-wrap items-center justify-between shadow-xl no-print gap-8">
+                <button class="px-6 py-2 bg-white border-2 rounded-xl font-bold text-slate-500 hover:bg-slate-50" onclick="showInput()">← กลับไปแก้ไขทีม</button>
+                <div class="flex gap-8 items-center text-[10px] font-black uppercase text-slate-300 tracking-widest flex-1 justify-center">
+                    <div class="flex flex-col gap-1 w-24"><span>ขนาด: <span id="val-w">240</span>px</span><input type="range" min="150" max="400" value="240" oninput="updateSettings('w', this.value)" /></div>
+                    <div class="flex flex-col gap-1 w-24"><span>ห่าง: <span id="val-g">60</span>px</span><input type="range" min="10" max="200" value="60" oninput="updateSettings('g', this.value)" /></div>
+                    <div class="flex flex-col gap-1 w-24"><span>ฟอนต์: <span id="val-f">16</span>px</span><input type="range" min="10" max="30" value="16" oninput="updateSettings('f', this.value)" /></div>
+                </div>
+                <button class="px-6 py-2 bg-green-500 text-white rounded-xl font-black text-sm shadow-lg shadow-green-100" onclick="window.print()">บันทึกเป็น PDF</button>
+            </div>
+
+            <div class="relative w-full overflow-x-auto pb-48 custom-scrollbar">
+                <div id="bracket-container" class="relative flex gap-32 items-center justify-center min-w-max px-32">
+                    <svg id="svg-layer" class="line-svg"></svg>
+                    <!-- Bracket rounds will be generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_LOGO = 'mpfk3fj8-image.png';
+        let teams = [
+            { id: 1, name: "สิงห์คะนองนา", logo: DEFAULT_LOGO },
+            { id: 2, name: "มังกรทอง FC", logo: DEFAULT_LOGO },
+            { id: 3, name: "อินทรีเหล็ก Esports", logo: DEFAULT_LOGO },
+            { id: 4, name: "หงส์แดง มหาอุด", logo: DEFAULT_LOGO },
+            { id: 5, name: "ฉลามชล Gaming", logo: DEFAULT_LOGO },
+            { id: 6, name: "พยัคฆ์ร้ายสายน้ำ", logo: DEFAULT_LOGO },
+            { id: 7, name: "ยักษ์เขียว", logo: DEFAULT_LOGO },
+            { id: 8, name: "สายฟ้าแลบ", logo: DEFAULT_LOGO }
+        ];
+        let bracket = [];
+        let currentLogo = null;
+        let settings = { w: 240, g: 60, f: 16 };
+
+        function previewLogo(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    currentLogo = e.target.result;
+                    document.getElementById('logo-preview').src = currentLogo;
+                    document.getElementById('logo-preview').classList.remove('opacity-20');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function addTeam() {
+            const name = document.getElementById('team-name').value.trim();
+            if (name) {
+                teams.push({ id: Date.now(), name, logo: currentLogo || DEFAULT_LOGO });
+                document.getElementById('team-name').value = '';
+                document.getElementById('logo-upload').value = '';
+                document.getElementById('logo-preview').src = DEFAULT_LOGO;
+                document.getElementById('logo-preview').classList.add('opacity-20');
+                currentLogo = null;
+                renderTeams();
+            }
+        }
+
+        function removeTeam(id) {
+            teams = teams.filter(t => t.id !== id);
+            renderTeams();
+        }
+
+        function renderTeams() {
+            const list = document.getElementById('teams-list');
+            list.innerHTML = teams.map(t => `
+                <div class="flex items-center justify-between p-4 bg-white rounded-2xl border-2 border-slate-50 shadow-sm hover:border-green-100 transition-all group">
+                    <div class="flex items-center gap-4">
+                        <img src="${t.logo}" class="w-10 h-10 rounded-full border bg-slate-50 object-cover" />
+                        <span class="font-bold text-slate-700">${t.name}</span>
+                    </div>
+                    <button onclick="removeTeam(${t.id})" class="text-red-400 opacity-0 group-hover:opacity-100 transition-all font-black text-sm">ลบ</button>
+                </div>
+            `).join('');
+            document.getElementById('team-count').innerText = teams.length;
+            document.getElementById('start-btn').disabled = teams.length < 2;
+        }
+
+        function startBracket() {
+            if (teams.length < 2) return;
+            const shuffled = [...teams].sort(() => Math.random() - 0.5);
+            const size = Math.pow(2, Math.ceil(Math.log2(shuffled.length)));
+            const slots = new Array(size).fill(null);
+            shuffled.forEach((t, i) => slots[i] = t);
+
+            bracket = [];
+            const r1 = [];
+            for (let i = 0; i < size; i += 2) {
+                let t1 = slots[i], t2 = slots[i+1];
+                let win = (t1 && !t2) ? t1 : (t2 && !t1) ? t2 : null;
+                r1.push({ t1, t2, win });
+            }
+            bracket.push(r1);
+
+            let count = size / 4;
+            while (count >= 1) {
+                let rd = [];
+                for (let i = 0; i < count; i++) rd.push({ t1: null, t2: null, win: null });
+                bracket.push(rd);
+                count /= 2;
+            }
+
+            propagate();
+            document.getElementById('input-section').classList.add('hidden');
+            document.getElementById('bracket-section').classList.remove('hidden');
+            document.getElementById('bracket-section').classList.add('flex');
+            renderBracket();
+        }
+
+        function propagate() {
+            for (let r = 0; r < bracket.length - 1; r++) {
+                bracket[r].forEach((m, i) => {
+                    if (m.win) {
+                        const next = bracket[r+1][Math.floor(i/2)];
+                        if (i % 2 === 0) next.t1 = m.win; else next.t2 = m.win;
+                    }
+                });
+            }
+        }
+
+        function renderBracket() {
+            const container = document.getElementById('bracket-container');
+            // Root variables for dynamic sizing
+            container.style.setProperty('--match-width', `${settings.w}px`);
+            container.style.setProperty('--match-gap', `${settings.g}px`);
+            container.style.setProperty('--font-size', `${settings.f}px`);
+
+            container.innerHTML = '<svg id="svg-layer" class="line-svg"></svg>';
+            
+            bracket.forEach((round, rIdx) => {
+                const roundDiv = document.createElement('div');
+                roundDiv.className = 'flex flex-col justify-around py-10';
+                roundDiv.style.gap = `${settings.g}px`;
+                roundDiv.style.minHeight = '900px';
+
+                const title = document.createElement('h4');
+                title.className = 'text-center text-[11px] font-black text-green-500 bg-green-50 px-4 py-1.5 rounded-full inline-block border border-green-100 uppercase tracking-widest mb-4';
+                title.innerText = rIdx === bracket.length - 1 ? 'Championship' : `Round ${rIdx + 1}`;
+                roundDiv.appendChild(title);
+
+                round.forEach((m, mIdx) => {
+                    const matchDiv = document.createElement('div');
+                    matchDiv.id = `m-${rIdx}-${mIdx}`;
+                    matchDiv.className = 'match-card';
+                    
+                    const t1Div = createTeamSlot(rIdx, mIdx, m.t1, m.win, 1);
+                    const t2Div = createTeamSlot(rIdx, mIdx, m.t2, m.win, 2);
+                    
+                    matchDiv.appendChild(t1Div);
+                    matchDiv.appendChild(t2Div);
+                    roundDiv.appendChild(matchDiv);
+                });
+                container.appendChild(roundDiv);
+            });
+
+            setTimeout(drawLines, 100);
+        }
+
+        function createTeamSlot(rIdx, mIdx, team, winner, slotNum) {
+            const div = document.createElement('div');
+            const isWinner = winner && team && winner.id === team.id;
+            const isLoser = winner && team && winner.id !== team.id;
+            
+            div.className = `team-slot ${isWinner ? 'winner' : ''} ${isLoser ? 'loser' : ''} ${!team ? 'empty' : ''}`;
+            div.onclick = () => pickWinner(rIdx, mIdx, team);
+
+            if (team) {
+                div.innerHTML = `
+                    <img src="${team.logo}" class="team-logo" />
+                    <span class="truncate">${team.name}</span>
+                `;
+            } else {
+                div.innerHTML = `<span class="opacity-30">TBD</span>`;
+            }
+            return div;
+        }
+
+        function pickWinner(rIdx, mIdx, team) {
+            if (!team || !bracket) return;
+            bracket[rIdx][mIdx].win = team;
+            
+            let r = rIdx + 1, m = Math.floor(mIdx/2), isT1 = (mIdx % 2 === 0);
+            while (r < bracket.length) {
+                const target = bracket[r][m];
+                const old = isT1 ? target.t1?.id : target.t2?.id;
+                if (isT1) target.t1 = team; else target.t2 = team;
+                if (old !== team.id) target.win = null; else break;
+                isT1 = (m % 2 === 0); m = Math.floor(m/2); r++;
+            }
+            
+            if (rIdx === bracket.length - 1) {
+                showChamp(team);
+            }
+            
+            renderBracket();
+        }
+
+        function showChamp(team) {
+            document.getElementById('champ-name').innerText = team.name;
+            document.getElementById('champ-img').src = team.logo;
+            document.getElementById('champ-overlay').classList.add('active');
+        }
+
+        function closeChamp() {
+            document.getElementById('champ-overlay').classList.remove('active');
+        }
+
+        function updateSettings(key, val) {
+            settings[key] = parseInt(val);
+            document.getElementById(`val-${key}`).innerText = val;
+            renderBracket();
+        }
+
+        function drawLines() {
+            const svg = document.getElementById('svg-layer');
+            if (!svg) return;
+            const container = document.getElementById('bracket-container');
+            const rect = container.getBoundingClientRect();
+            
+            svg.innerHTML = '';
+            svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+
+            for (let r = 0; r < bracket.length - 1; r++) {
+                bracket[r].forEach((m, i) => {
+                    const startEl = document.getElementById(`m-${r}-${i}`);
+                    const endEl = document.getElementById(`m-${r+1}-${Math.floor(i/2)}`);
+                    if (startEl && endEl) {
+                        const s = startEl.getBoundingClientRect();
+                        const e = endEl.getBoundingClientRect();
+                        const x1 = s.right - rect.left;
+                        const y1 = s.top + s.height/2 - rect.top;
+                        const x2 = e.left - rect.left;
+                        const y2 = e.top + e.height/2 - rect.top;
+                        const mid = x1 + (x2 - x1) / 2;
+
+                        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                        path.setAttribute('d', `M ${x1} ${y1} L ${mid} ${y1} L ${mid} ${y2} L ${x2} ${y2}`);
+                        path.setAttribute('class', `path ${m.win ? 'active' : ''}`);
+                        svg.appendChild(path);
+                    }
+                });
+            }
+        }
+
+        function showInput() {
+            document.getElementById('bracket-section').classList.add('hidden');
+            document.getElementById('input-section').classList.remove('hidden');
+        }
+
+        // Init
+        renderTeams();
+        window.addEventListener('resize', drawLines);
+
+    </script>
+</body>
+</html>
