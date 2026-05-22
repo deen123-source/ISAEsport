@@ -1,7 +1,0 @@
-- 1. Initialize layout with ISA Green palette and school logo (mpfk3fj8-image.png).
-- 2. Implement team entry with name and logo upload (fallback to ISA logo).
-- 3. Build bracket generation logic for any number of teams (handling byes).
-- 4. Add interactive winner selection that propagates through rounds.
-- 5. Implement "Settings" panel for Match Card Width, Vertical Gap, and Font Size.
-- 6. Add Champion Celebration overlay with the winning team's logo.
-- 7. Verify all tags are closed and Babel/React scripts are correctly linked.
